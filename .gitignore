@@ -1,0 +1,5 @@
+__pycache__/
+instance/
+uploads/
+*.pyc
+.DS_Store
