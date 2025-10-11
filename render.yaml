@@ -4,7 +4,7 @@ services:
     env: python
     region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: sh -c "python scripts/ensure_owner.py && gunicorn -w 3 -b 0.0.0.0:$PORT wsgi:app"
+    startCommand: sh -c "python -m scripts.ensure_owner && gunicorn -w 3 -b 0.0.0.0:$PORT wsgi:app"
     envVars:
       - key: FLASK_ENV
         value: production
