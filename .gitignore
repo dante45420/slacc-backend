@@ -3,3 +3,4 @@ instance/
 uploads/
 *.pyc
 .DS_Store
+.venv/
