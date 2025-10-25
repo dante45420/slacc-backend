@@ -4,18 +4,17 @@ from ..extensions import db
 from sqlalchemy import or_
 from ..models.course import Course, CourseEnrollment
 from ..models.user import User
-from datetime import datetime
+from datetime import datetime, timezone
 
 events_bp = Blueprint("events", __name__, url_prefix="/api")
 
 
 @events_bp.get("/events")
 def list_events():
-    from datetime import datetime
     event_type = (request.args.get("type") or "").strip().lower()
     past = (request.args.get("past") or "").strip().lower() in ("1", "true", "yes")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     q = Course.query
     if event_type in ("webinar", "presencial"):
         q = q.filter(Course.format == event_type)
@@ -70,7 +69,7 @@ def enroll_event(course_id: int):
 
     if not course.is_active:
         return jsonify({"error": "El evento no está activo"}), 400
-    if course.registration_deadline and datetime.utcnow() > course.registration_deadline:
+    if course.registration_deadline and datetime.now(timezone.utc) > course.registration_deadline:
         return jsonify({"error": "El plazo de inscripción terminó"}), 400
 
     # Capacidad
@@ -103,17 +102,16 @@ def enroll_event(course_id: int):
     except Exception:
         pass
 
-    enrollment = CourseEnrollment(
-        course_id=course.id,
-        user_id=user_id,
-        student_name=name,
-        student_email=email,
-        student_phone=phone,
-        payment_status="pending",
-        payment_amount=payment_amount,
-        membership_type=membership_type,
-        is_member=is_member,
-    )
+    enrollment = CourseEnrollment()
+    enrollment.course_id = course.id
+    enrollment.user_id = user_id
+    enrollment.student_name = name
+    enrollment.student_email = email
+    enrollment.student_phone = phone
+    enrollment.payment_status = "pending"
+    enrollment.payment_amount = payment_amount
+    enrollment.membership_type = membership_type
+    enrollment.is_member = is_member
     db.session.add(enrollment)
     db.session.commit()
 

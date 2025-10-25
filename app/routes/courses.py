@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..extensions import db
@@ -59,7 +59,7 @@ def enroll_course(course_id):
         return jsonify({"error": "El curso ha alcanzado su límite de estudiantes"}), 400
     
     # Verificar fecha límite de inscripción
-    if course.registration_deadline and datetime.utcnow() > course.registration_deadline:
+    if course.registration_deadline and datetime.now(timezone.utc) > course.registration_deadline:
         return jsonify({"error": "La fecha límite de inscripción ha pasado"}), 400
     
     # Determinar si es socio y tipo de membresía
@@ -71,17 +71,16 @@ def enroll_course(course_id):
     price = course.get_price_for_membership_type(membership_type, is_member)
     
     # Crear inscripción
-    enrollment = CourseEnrollment(
-        course_id=course_id,
-        user_id=user.id if user else None,
-        student_name=student_name,
-        student_email=student_email,
-        student_phone=student_phone,
-        payment_amount=price,
-        membership_type=membership_type,
-        is_member=is_member,
-        payment_status="pending"
-    )
+    enrollment = CourseEnrollment()
+    enrollment.course_id = course_id
+    enrollment.user_id = user.id if user else None
+    enrollment.student_name = student_name
+    enrollment.student_email = student_email
+    enrollment.student_phone = student_phone
+    enrollment.payment_amount = price
+    enrollment.membership_type = membership_type
+    enrollment.is_member = is_member
+    enrollment.payment_status = "pending"
     
     db.session.add(enrollment)
     db.session.commit()
@@ -109,7 +108,7 @@ def confirm_course_payment(course_id, enrollment_id):
     
     # Simular confirmación de pago
     enrollment.payment_status = "paid"
-    enrollment.payment_date = datetime.utcnow()
+    enrollment.payment_date = datetime.now(timezone.utc)
     
     db.session.commit()
     

@@ -10,13 +10,31 @@ app = create_app()
 with app.app_context():
   db.drop_all(); db.create_all()
   # Owner admin se crea por bootstrap; añadimos un miembro de ejemplo
-  member = User(email="miembro@example.com", name="Miembro Demo", password_hash=generate_password_hash("demo1234"), role="member", membership_type="normal", is_active=True, payment_status="paid")
+  member = User()
+  member.email = "miembro@example.com"
+  member.name = "Miembro Demo"
+  member.password_hash = generate_password_hash("demo1234")
+  member.role = "member"
+  member.membership_type = "normal"
+  member.is_active = True
+  member.payment_status = "paid"
   db.session.add(member)
   # Noticias demo
-  db.session.add_all([
-    News(title="Noticia publicada", excerpt="Resumen", content="Contenido", status="published", order_index=0),
-    News(title="Noticia pendiente", excerpt="Resumen 2", content="Contenido 2", status="pending", order_index=1)
-  ])
+  news1 = News()
+  news1.title = "Noticia publicada"
+  news1.excerpt = "Resumen"
+  news1.content = "Contenido"
+  news1.status = "published"
+  news1.order_index = 0
+  
+  news2 = News()
+  news2.title = "Noticia pendiente"
+  news2.excerpt = "Resumen 2"
+  news2.content = "Contenido 2"
+  news2.status = "pending"
+  news2.order_index = 1
+  
+  db.session.add_all([news1, news2])
   db.session.commit()
   print("Base de datos creada. Usa el panel admin para crear contenido.")
 

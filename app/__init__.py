@@ -12,6 +12,7 @@ from .routes.auth import auth_bp
 from .routes.public import public_bp
 from .routes.admin import admin_bp
 from .routes.events import events_bp
+from .routes.courses import courses_bp
 
 
 def create_app():
@@ -43,6 +44,7 @@ def create_app():
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(events_bp)
+    app.register_blueprint(courses_bp)
 
     @app.get("/api/health")
     def health():
@@ -67,14 +69,13 @@ def _bootstrap_owner():
     existing = User.query.filter_by(email=owner_email).first()
     if existing:
         return
-    owner = User(
-        email=owner_email,
-        name="Owner",
-        password_hash=generate_password_hash(owner_password),
-        role="admin",
-        is_active=True,
-        payment_status="paid",
-    )
+    owner = User()
+    owner.email = owner_email
+    owner.name = "Owner"
+    owner.password_hash = generate_password_hash(owner_password)
+    owner.role = "admin"
+    owner.is_active = True
+    owner.payment_status = "paid"
     db.session.add(owner)
     db.session.commit()
 

@@ -16,14 +16,13 @@ with app.app_context():
         if existing:
             print(f"[ensure_owner] Usuario {email} ya existe. Nada que hacer.")
         else:
-            user = User(
-                email=email,
-                name="Owner",
-                password_hash=generate_password_hash(password),
-                role="admin",
-                is_active=True,
-                payment_status="paid",
-            )
+            user = User()
+            user.email = email
+            user.name = "Owner"
+            user.password_hash = generate_password_hash(password)
+            user.role = "admin"
+            user.is_active = True
+            user.payment_status = "paid"
             db.session.add(user)
             db.session.commit()
             print(f"[ensure_owner] Usuario admin {email} creado.")

@@ -20,14 +20,13 @@ def create_application():
     motivation = (request.form.get("motivation") or "").strip()
     specialization = (request.form.get("specialization") or "").strip()
     experience = request.form.get("experience")
-    app_row = Application(
-      name=name,
-      email=email,
-      phone=phone,
-      motivation=motivation,
-      specialization=specialization,
-      experience_years=experience,
-    )
+    app_row = Application()
+    app_row.name = name
+    app_row.email = email
+    app_row.phone = phone
+    app_row.motivation = motivation
+    app_row.specialization = specialization
+    app_row.experience_years = experience
     db.session.add(app_row)
     db.session.flush()
 
@@ -40,21 +39,22 @@ def create_application():
         path = os.path.join(upload_dir, namef)
         f.save(path)
         from ..models.application import ApplicationAttachment
-        att = ApplicationAttachment(application_id=app_row.id, file_url=f"/uploads/{namef}")
+        att = ApplicationAttachment()
+        att.application_id = app_row.id
+        att.file_url = f"/uploads/{namef}"
         db.session.add(att)
 
     db.session.commit()
     return jsonify({"id": app_row.id, "status": app_row.status}), 201
   else:
     data = request.get_json() or {}
-    app_row = Application(
-      name=data.get("name", "").strip(),
-      email=(data.get("email", "").strip().lower()),
-      phone=data.get("phone", "").strip(),
-      motivation=data.get("motivation", "").strip(),
-      specialization=data.get("specialization", "").strip(),
-      experience_years=data.get("experience"),
-    )
+    app_row = Application()
+    app_row.name = data.get("name", "").strip()
+    app_row.email = (data.get("email", "").strip().lower())
+    app_row.phone = data.get("phone", "").strip()
+    app_row.motivation = data.get("motivation", "").strip()
+    app_row.specialization = data.get("specialization", "").strip()
+    app_row.experience_years = data.get("experience")
     db.session.add(app_row)
     db.session.commit()
     return jsonify({"id": app_row.id, "status": app_row.status}), 201
@@ -93,7 +93,7 @@ def news_detail(news_id):
             if user and user.role == "admin":
                 # Admin puede ver cualquier noticia
                 return jsonify(news.to_dict())
-    except:
+    except Exception:
         pass
     
     # Usuario no autenticado o no admin solo puede ver noticias publicadas
@@ -106,30 +106,32 @@ def news_detail(news_id):
 @public_bp.get("/instagram/recent")
 def instagram_recent():
     """Devuelve últimos 3 posts de Instagram vía Graph API. Usa placeholders si no hay credenciales."""
+    INSTAGRAM_PERMALINK = "https://instagram.com/slacc_cadera"
     access_token = os.environ.get("INSTAGRAM_ACCESS_TOKEN")
     user_id = os.environ.get("INSTAGRAM_USER_ID")
     limit = int(request.args.get("limit", 3))
 
-    if not access_token or not user_id:
+    # Check if credentials are actually valid (not just "..." placeholder)
+    if not access_token or not user_id or access_token == "..." or user_id == "...":
         # Fallback placeholder
         placeholder = [
             {
                 "id": "ph1",
                 "caption": "Caso clínico de artroplastia – discusión multidisciplinaria",
                 "media_url": "https://images.unsplash.com/photo-1544717302-de2939b7ef71?q=80&w=800&auto=format&fit=crop",
-                "permalink": "https://instagram.com/slacc_cadera"
+                "permalink": INSTAGRAM_PERMALINK
             },
             {
                 "id": "ph2",
                 "caption": "Tips quirúrgicos: abordajes en cadera compleja",
                 "media_url": "https://images.unsplash.com/photo-1550831107-1553da8c8464?q=80&w=800&auto=format&fit=crop",
-                "permalink": "https://instagram.com/slacc_cadera"
+                "permalink": INSTAGRAM_PERMALINK
             },
             {
                 "id": "ph3",
                 "caption": "Agenda: próximos webinars y cursos SLACC",
                 "media_url": "https://images.unsplash.com/photo-1526256262350-7da7584cf5eb?q=80&w=800&auto=format&fit=crop",
-                "permalink": "https://instagram.com/slacc_cadera"
+                "permalink": INSTAGRAM_PERMALINK
             },
         ]
         return jsonify(placeholder[:limit])
@@ -191,15 +193,14 @@ def news_create():
     
     print(f"Final image_url: {image_url}")
     
-    n = News(
-      title=title,
-      excerpt=excerpt,
-      content=content,
-      image_url=image_url,
-      category=(request.form.get("category") or "comunicados").strip().lower(),
-      status="pending",
-      created_by_user_id=uid,
-    )
+    n = News()
+    n.title = title
+    n.excerpt = excerpt
+    n.content = content
+    n.image_url = image_url
+    n.category = (request.form.get("category") or "comunicados").strip().lower()
+    n.status = "pending"
+    n.created_by_user_id = uid
     db.session.add(n)
     db.session.commit()
     print(f"News created with ID {n.id}")

@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..extensions import db
@@ -83,7 +84,7 @@ def approve_application(app_id):
   app_row.status = "payment_pending"  # Cambio: ahora queda esperando pago
   app_row.membership_type = membership_type
   app_row.resolution_note = data.get("note", "Aprobado - Esperando pago")
-  app_row.decided_at = datetime.utcnow()
+  app_row.decided_at = datetime.now(timezone.utc)
   
   db.session.commit()
   return jsonify({"message": "Aprobado - Esperando pago", "membership_type": membership_type})
@@ -97,13 +98,13 @@ def reject_application(app_id):
   if not user or user.role != "admin":
     return jsonify({"message":"Forbidden"}), 403
 
-  from datetime import datetime
   app_row = Application.query.get_or_404(app_id)
   if app_row.status != "pending":
     return jsonify({"message": "La solicitud ya fue resuelta"}), 400
   app_row.status = "rejected"
-  app_row.resolution_note = request.json.get("note", "Rechazado")
-  app_row.decided_at = datetime.utcnow()
+  data = request.get_json() or {}
+  app_row.resolution_note = data.get("note", "Rechazado")
+  app_row.decided_at = datetime.now(timezone.utc)
   db.session.commit()
   return jsonify({"message": "Rechazado"})
 
@@ -135,21 +136,20 @@ def confirm_payment(app_id):
   temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
   
   # Crear el usuario
-  new_user = User(
-    email=app_row.email,
-    name=app_row.name,
-    password_hash=generate_password_hash(temp_password),
-    role="member",
-    membership_type=app_row.membership_type,
-    is_active=True,
-    payment_status="paid",
-  )
+  new_user = User()
+  new_user.email = app_row.email
+  new_user.name = app_row.name
+  new_user.password_hash = generate_password_hash(temp_password)
+  new_user.role = "member"
+  new_user.membership_type = app_row.membership_type
+  new_user.is_active = True
+  new_user.payment_status = "paid"
   db.session.add(new_user)
   
   # Actualizar la aplicación
   app_row.status = "paid"
   app_row.resolution_note = f"{app_row.resolution_note}\n\nPago confirmado - Usuario creado"
-  app_row.decided_at = datetime.utcnow()
+  app_row.decided_at = datetime.now(timezone.utc)
   
   db.session.commit()
   
@@ -298,7 +298,7 @@ def edit_news(news_id):
                 if news.image_url and os.path.exists(os.path.join(current_app.config["UPLOAD_DIR"], news.image_url.lstrip('/uploads/'))):
                     try:
                         os.remove(os.path.join(current_app.config["UPLOAD_DIR"], news.image_url.lstrip('/uploads/')))
-                    except:
+                    except OSError:
                         pass
                 
                 # Actualizar URL de la imagen
@@ -363,14 +363,13 @@ def admin_create_admin():
     return jsonify({"message": "Email ya existe"}), 400
   
   from werkzeug.security import generate_password_hash
-  new_admin = User(
-    email=email,
-    name=name,
-    password_hash=generate_password_hash(password),
-    role="admin",
-    is_active=True,
-    payment_status="paid",
-  )
+  new_admin = User()
+  new_admin.email = email
+  new_admin.name = name
+  new_admin.password_hash = generate_password_hash(password)
+  new_admin.role = "admin"
+  new_admin.is_active = True
+  new_admin.payment_status = "paid"
   db.session.add(new_admin)
   db.session.commit()
   return jsonify({"message": "Admin creado", "credentials": {"email": email, "password": password}}), 201
@@ -418,24 +417,23 @@ def admin_events_create():
     if len(s) == 10:
       s = s + "T00:00:00"
     return datetime.fromisoformat(s)
-  course = Course(
-    title=(data.get("title") or "").strip(),
-    description=(data.get("description") or "").strip(),
-    content=(data.get("content") or "").strip(),
-    instructor=(data.get("instructor") or "").strip(),
-    duration_hours=data.get("duration_hours"),
-    format=(data.get("format") or "webinar"),
-    max_students=data.get("max_students"),
-    price_member=float(data.get("price_member") or 0),
-    price_non_member=float(data.get("price_non_member") or 0),
-    price_joven=float(data.get("price_joven") or 0),
-    price_gratuito=float(data.get("price_gratuito") or 0),
-    start_date=parse(data.get("start_date")),
-    end_date=parse(data.get("end_date")),
-    registration_deadline=parse(data.get("registration_deadline")),
-    is_active=bool(data.get("is_active", True)),
-    image_url=(data.get("image_url") or "").strip(),
-  )
+  course = Course()
+  course.title = (data.get("title") or "").strip()
+  course.description = (data.get("description") or "").strip()
+  course.content = (data.get("content") or "").strip()
+  course.instructor = (data.get("instructor") or "").strip()
+  course.duration_hours = data.get("duration_hours")
+  course.format = (data.get("format") or "webinar")
+  course.max_students = data.get("max_students")
+  course.price_member = float(data.get("price_member") or 0)
+  course.price_non_member = float(data.get("price_non_member") or 0)
+  course.price_joven = float(data.get("price_joven") or 0)
+  course.price_gratuito = float(data.get("price_gratuito") or 0)
+  course.start_date = parse(data.get("start_date"))
+  course.end_date = parse(data.get("end_date"))
+  course.registration_deadline = parse(data.get("registration_deadline"))
+  course.is_active = bool(data.get("is_active", True))
+  course.image_url = (data.get("image_url") or "").strip()
   db.session.add(course)
   db.session.commit()
   return jsonify(course.to_dict()), 201
@@ -597,15 +595,14 @@ def admin_create_member():
     return jsonify({"message": "Email ya existe"}), 400
 
   from werkzeug.security import generate_password_hash
-  new_member = User(
-    email=email,
-    name=name,
-    password_hash=generate_password_hash(password),
-    role="member",
-    membership_type=membership_type,
-    is_active=True,
-    payment_status=data.get("payment_status") or "due",
-  )
+  new_member = User()
+  new_member.email = email
+  new_member.name = name
+  new_member.password_hash = generate_password_hash(password)
+  new_member.role = "member"
+  new_member.membership_type = membership_type
+  new_member.is_active = True
+  new_member.payment_status = data.get("payment_status") or "due"
   db.session.add(new_member)
   db.session.commit()
 
