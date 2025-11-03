@@ -172,10 +172,7 @@ def admin_news_list():
     return jsonify({"message":"Forbidden"}), 403
 
   items = News.query.order_by(News.created_at.desc()).all()
-  return jsonify([
-    {"id": n.id, "title": n.title, "status": n.status, "order_index": n.order_index}
-    for n in items
-  ])
+  return jsonify([n.to_dict() for n in items])
 
 
 @admin_bp.post("/news/<int:news_id>/approve")
