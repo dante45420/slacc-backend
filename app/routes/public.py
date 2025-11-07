@@ -76,25 +76,29 @@ def news_list():
 @public_bp.get("/news/<int:news_id>")
 def news_detail(news_id):
     """Obtener una noticia específica por ID"""
+    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+    from app.models.user import User
+    
     news = News.query.get(news_id)
     if not news:
         return jsonify({"error": "Noticia no encontrada"}), 404
     
-    # Solo noticias publicadas son visibles públicamente
-    # Pero si hay un token válido de admin, puede ver cualquier noticia
-    from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
-    from app.models.user import User
-    
+    # Intentar verificar JWT (opcional - no falla si no hay token)
+    is_admin = False
     try:
-        # Intentar obtener el usuario del token
+        verify_jwt_in_request(optional=True)
         current_user_id = get_jwt_identity()
         if current_user_id:
             user = User.query.get(int(current_user_id))
             if user and user.role == "admin":
-                # Admin puede ver cualquier noticia
-                return jsonify(news.to_dict())
-    except Exception:
-        pass
+                is_admin = True
+    except Exception as e:
+        # Si hay error verificando JWT, continuar como usuario no autenticado
+        print(f"JWT verification failed: {e}")
+    
+    # Admin puede ver cualquier noticia
+    if is_admin:
+        return jsonify(news.to_dict())
     
     # Usuario no autenticado o no admin solo puede ver noticias publicadas
     if news.status != "published":
