@@ -30,7 +30,8 @@ def create_app():
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET", "change-this-secret")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 
-    CORS(app, resources={r"/api/*": {"origins": os.getenv("CORS_ORIGINS", "*")}})
+    # CORS(app, resources={r"/api/*": {"origins": os.getenv("CORS_ORIGINS", "*")}})
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # Uploads (simula bucket)
     app.config["UPLOAD_DIR"] = os.getenv("UPLOAD_DIR", os.path.join(os.path.dirname(__file__), "..", "uploads"))
