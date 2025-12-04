@@ -7,6 +7,7 @@ from ..models.application import Application
 from ..models.news import News
 from ..models.user import User
 from ..models.course import Course, CourseEnrollment
+from ..utils.image_processing import process_uploaded_image
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -153,12 +154,16 @@ def confirm_payment(app_id):
   
   db.session.commit()
   
-  # TODO: Send credentials via secure email instead of returning in response
+  # Return credentials for one-time display (admin should copy and send to user)
+  # In production, this should be sent via email directly to the user
   return jsonify({
-    "message": "Pago confirmado - Usuario creado. Credenciales deben ser enviadas por email al usuario.", 
+    "message": "Pago confirmado - Usuario creado exitosamente", 
     "user_id": new_user.id,
-    "email": new_user.email,
-    "membership_type": new_user.membership_type
+    "credentials": {
+      "email": new_user.email,
+      "password": temp_password,
+      "membership_type": new_user.membership_type
+    }
   })
 
 
@@ -289,6 +294,11 @@ def edit_news(news_id):
                 
                 # Guardar la nueva imagen
                 image_file.save(filepath)
+                
+                # Optimize the image
+                optimize_success, optimize_msg = process_uploaded_image(filepath, max_width=1920, max_height=1080, quality=85)
+                if optimize_success:
+                    print(f"Image optimized: {optimize_msg}")
                 
                 # Eliminar imagen anterior si existe
                 if news.image_url and os.path.exists(os.path.join(current_app.config["UPLOAD_DIR"], news.image_url.lstrip('/uploads/'))):
@@ -500,6 +510,12 @@ def admin_events_upload_image(event_id: int):
   upload_dir = os.path.abspath(current_app.config["UPLOAD_DIR"]) 
   path = os.path.join(upload_dir, filename)
   f.save(path)
+  
+  # Optimize the image
+  optimize_success, optimize_msg = process_uploaded_image(path, max_width=1920, max_height=1080, quality=85)
+  if optimize_success:
+    print(f"Image optimized: {optimize_msg}")
+  
   course.image_url = f"/uploads/{filename}"
   db.session.commit()
   return jsonify({"image_url": course.image_url})

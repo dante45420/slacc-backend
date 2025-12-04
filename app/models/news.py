@@ -16,6 +16,13 @@ class News(db.Model):
 
   def to_dict(self):
       """Convertir a diccionario para API"""
+      from .user import User
+      author_name = None
+      if self.created_by_user_id:
+          user = User.query.get(self.created_by_user_id)
+          if user:
+              author_name = user.name
+      
       return {
           "id": self.id,
           "title": self.title,
@@ -26,7 +33,8 @@ class News(db.Model):
           "order_index": self.order_index,
           "category": self.category,
           "created_at": self.created_at.isoformat() if self.created_at else None,
-          "created_by_user_id": self.created_by_user_id
+          "created_by_user_id": self.created_by_user_id,
+          "author_name": author_name
       }
 
 

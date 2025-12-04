@@ -7,6 +7,7 @@ from ..extensions import db
 from ..models.news import News
 from ..models.application import Application
 from ..utils.file_validation import validate_image, validate_document, get_safe_filename
+from ..utils.image_processing import process_uploaded_image
 
 public_bp = Blueprint("public", __name__, url_prefix="/api")
 
@@ -69,15 +70,32 @@ def create_application():
 
 @public_bp.get("/news")
 def news_list():
+  from ..models.user import User
   q = News.query.filter_by(status="published")
   category = (request.args.get("category") or "").strip().lower()
   if category in ("comunicados", "prensa", "blog"):
     q = q.filter(News.category == category)
   items = q.order_by(News.order_index.asc(), News.created_at.desc()).all()
-  return jsonify([
-    {"id": n.id, "title": n.title, "excerpt": n.excerpt, "image_url": n.image_url, "category": n.category, "created_at": n.created_at.isoformat() if n.created_at else None}
-    for n in items
-  ])
+  
+  result = []
+  for n in items:
+    author_name = None
+    if n.created_by_user_id:
+      user = User.query.get(n.created_by_user_id)
+      if user:
+        author_name = user.name
+    
+    result.append({
+      "id": n.id,
+      "title": n.title,
+      "excerpt": n.excerpt,
+      "image_url": n.image_url,
+      "category": n.category,
+      "created_at": n.created_at.isoformat() if n.created_at else None,
+      "author_name": author_name
+    })
+  
+  return jsonify(result)
 
 
 @public_bp.get("/news/<int:news_id>")
@@ -202,6 +220,11 @@ def news_create():
         if not is_valid:
           os.remove(path)  # Delete invalid file
           return jsonify({"error": f"Imagen inválida: {result}"}), 400
+        
+        # Optimize the image
+        optimize_success, optimize_msg = process_uploaded_image(path, max_width=1920, max_height=1080, quality=85)
+        if optimize_success:
+          print(f"Image optimized: {optimize_msg}")
         
         image_url = f"/uploads/{name}"
     
