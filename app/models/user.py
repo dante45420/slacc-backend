@@ -9,7 +9,7 @@ class User(db.Model):
   name = db.Column(db.String(255), nullable=False)
   password_hash = db.Column(db.String(255), nullable=False)
   role = db.Column(db.String(20), nullable=False, default="member")  # admin | member
-  membership_type = db.Column(db.String(20), default="normal")  # Nueva: joven | normal | gratuito
+  membership_type = db.Column(db.String(20), default="normal")  # joven (Nex Gen) | normal | gratuito (Emérito)
   is_active = db.Column(db.Boolean, default=True)
   payment_status = db.Column(db.String(20), default="due")  # none | due | paid
   auto_payment_enabled = db.Column(db.Boolean, default=False)

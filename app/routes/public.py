@@ -6,6 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..extensions import db
 from ..models.news import News
 from ..models.application import Application
+from ..utils.file_validation import validate_image, validate_document, get_safe_filename
 
 public_bp = Blueprint("public", __name__, url_prefix="/api")
 
@@ -33,11 +34,17 @@ def create_application():
     if "document" in request.files and request.files["document"]:
       f = request.files["document"]
       if f.filename and f.filename.lower().endswith(".pdf"):
-        ext = os.path.splitext(f.filename)[1].lower() or ".pdf"
-        namef = f"application-{uuid.uuid4().hex}{ext}"
+        namef = get_safe_filename(f.filename)
         upload_dir = os.path.abspath(current_app.config["UPLOAD_DIR"]) 
         path = os.path.join(upload_dir, namef)
         f.save(path)
+        
+        # Validate file type after saving
+        is_valid, result = validate_document(path)
+        if not is_valid:
+          os.remove(path)  # Delete invalid file
+          return jsonify({"error": f"Archivo inválido: {result}"}), 400
+        
         from ..models.application import ApplicationAttachment
         att = ApplicationAttachment()
         att.application_id = app_row.id
@@ -184,12 +191,18 @@ def news_create():
     if "image" in request.files and request.files["image"]:
       f = request.files["image"]
       if f.filename:
-        ext = os.path.splitext(f.filename)[1].lower() or ".jpg"
-        name = f"news-{uuid.uuid4().hex}{ext}"
+        name = get_safe_filename(f.filename)
         upload_dir = os.path.abspath(current_app.config["UPLOAD_DIR"]) 
         path = os.path.join(upload_dir, name)
         print(f"Saving image to {path}")
         f.save(path)
+        
+        # Validate file type after saving
+        is_valid, result = validate_image(path)
+        if not is_valid:
+          os.remove(path)  # Delete invalid file
+          return jsonify({"error": f"Imagen inválida: {result}"}), 400
+        
         image_url = f"/uploads/{name}"
     
     if not image_url:

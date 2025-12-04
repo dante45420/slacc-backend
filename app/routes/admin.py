@@ -153,13 +153,12 @@ def confirm_payment(app_id):
   
   db.session.commit()
   
+  # TODO: Send credentials via secure email instead of returning in response
   return jsonify({
-    "message": "Pago confirmado - Usuario creado", 
-    "credentials": {
-      "email": new_user.email, 
-      "password": temp_password,
-      "membership_type": new_user.membership_type
-    }
+    "message": "Pago confirmado - Usuario creado. Credenciales deben ser enviadas por email al usuario.", 
+    "user_id": new_user.id,
+    "email": new_user.email,
+    "membership_type": new_user.membership_type
   })
 
 
@@ -369,7 +368,12 @@ def admin_create_admin():
   new_admin.payment_status = "paid"
   db.session.add(new_admin)
   db.session.commit()
-  return jsonify({"message": "Admin creado", "credentials": {"email": email, "password": password}}), 201
+  # TODO: Send credentials via secure email
+  return jsonify({
+    "message": "Admin creado. Credenciales deben ser enviadas de forma segura.",
+    "user_id": new_admin.id,
+    "email": email
+  }), 201
 
 
 @admin_bp.get("/users")
@@ -603,7 +607,8 @@ def admin_create_member():
   db.session.add(new_member)
   db.session.commit()
 
+  # TODO: Send credentials via secure email
   resp = new_member.to_safe_dict()
-  resp.update({"initial_password": password})
+  resp.update({"message": "Usuario creado. Credenciales deben ser enviadas por email."})
   return jsonify(resp), 201
 

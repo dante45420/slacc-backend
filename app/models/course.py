@@ -10,7 +10,8 @@ class Course(db.Model):
     instructor = db.Column(db.String(255))  # Instructor del curso
     duration_hours = db.Column(db.Integer)  # Duración en horas
     format = db.Column(db.String(20), default="webinar")  # webinar | presencial
-    max_students = db.Column(db.Integer)  # Máximo de estudiantes
+    location = db.Column(db.String(255))  # Ubicación física o link para eventos presenciales/online
+    max_students = db.Column(db.Integer)  # Máximo de estudiantes (opcional)
     price_member = db.Column(db.Float, nullable=False, default=0)  # Precio para socios
     price_non_member = db.Column(db.Float, nullable=False, default=0)  # Precio para no socios
     price_joven = db.Column(db.Float, default=0)  # Precio especial para socios jóvenes
@@ -32,6 +33,7 @@ class Course(db.Model):
             "instructor": self.instructor,
             "duration_hours": self.duration_hours,
             "format": self.format,
+            "location": self.location,
             "max_students": self.max_students,
             "price_member": self.price_member,
             "price_non_member": self.price_non_member,
