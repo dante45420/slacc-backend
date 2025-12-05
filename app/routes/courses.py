@@ -21,7 +21,27 @@ def list_courses():
 def get_course(course_id):
     """Obtener detalles de un curso específico"""
     course = Course.query.get_or_404(course_id)
-    return jsonify(course.to_dict())
+    data = course.to_dict()
+    
+    # Check if current user is enrolled
+    data["is_enrolled"] = False
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        from ..models.user import User
+        verify_jwt_in_request(optional=True)
+        uid = get_jwt_identity()
+        if uid:
+            u = User.query.get(int(uid))
+            if u:
+                enrollment = CourseEnrollment.query.filter_by(
+                    course_id=course.id,
+                    student_email=u.email
+                ).first()
+                data["is_enrolled"] = enrollment is not None
+    except Exception:
+        pass
+    
+    return jsonify(data)
 
 
 @courses_bp.post("/courses/<int:course_id>/enroll")
@@ -64,8 +84,14 @@ def enroll_course(course_id):
     
     # Determinar si es socio y tipo de membresía
     user = User.query.filter_by(email=student_email).first()
-    is_member = user is not None and user.is_active
-    membership_type = user.membership_type if user else None
+    is_member = False
+    membership_type = None
+    
+    if user and user.is_active:
+        # Admins and paid members get member pricing
+        if (user.role == "admin") or (user.role == "member" and user.payment_status == "paid"):
+            is_member = True
+            membership_type = user.membership_type
     
     # Calcular precio
     price = course.get_price_for_membership_type(membership_type, is_member)

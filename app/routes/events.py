@@ -60,6 +60,23 @@ def event_detail(course_id: int):
     enrolled_count = CourseEnrollment.query.filter_by(course_id=course.id).filter(CourseEnrollment.payment_status != "cancelled").count()
     data["enrolled_count"] = enrolled_count
     data["seats_left"] = max(0, (course.max_students or 0) - enrolled_count) if course.max_students else None
+    
+    # Check if current user is enrolled
+    data["is_enrolled"] = False
+    try:
+        verify_jwt_in_request(optional=True)
+        uid = get_jwt_identity()
+        if uid:
+            u = User.query.get(int(uid))
+            if u:
+                enrollment = CourseEnrollment.query.filter_by(
+                    course_id=course.id,
+                    student_email=u.email
+                ).first()
+                data["is_enrolled"] = enrollment is not None
+    except Exception:
+        pass
+    
     return jsonify(data)
 
 
@@ -84,6 +101,15 @@ def enroll_event(course_id: int):
     if not name or not email:
         return jsonify({"error": "Nombre y email son requeridos"}), 400
 
+    # Check for existing enrollment
+    existing_enrollment = CourseEnrollment.query.filter_by(
+        course_id=course.id,
+        student_email=email
+    ).first()
+    
+    if existing_enrollment:
+        return jsonify({"error": "Ya estás inscrito en este evento"}), 400
+
     # Determinar precio según usuario actual
     user_id = None
     is_member = False
@@ -94,11 +120,13 @@ def enroll_event(course_id: int):
         uid = get_jwt_identity()
         if uid:
             u = User.query.get(int(uid))
-            if u and u.role == "member" and u.is_active and u.payment_status == "paid":
+            if u and u.is_active:
                 user_id = u.id
-                is_member = True
-                membership_type = u.membership_type
-                payment_amount = course.get_price_for_membership_type(membership_type, is_member=True)
+                # Admins and paid members get member pricing
+                if (u.role == "admin") or (u.role == "member" and u.payment_status == "paid"):
+                    is_member = True
+                    membership_type = u.membership_type
+                    payment_amount = course.get_price_for_membership_type(membership_type, is_member=True)
     except Exception:
         pass
 
