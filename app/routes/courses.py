@@ -14,7 +14,36 @@ courses_bp = Blueprint("courses", __name__, url_prefix="/api")
 def list_courses():
     """Listar cursos activos disponibles para inscripción"""
     courses = Course.query.filter_by(is_active=True).order_by(Course.start_date.asc()).all()
-    return jsonify([course.to_dict() for course in courses])
+    result = []
+    
+    # Check if user is authenticated to include enrollment status
+    user_email = None
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        from ..models.user import User
+        verify_jwt_in_request(optional=True)
+        uid = get_jwt_identity()
+        if uid:
+            u = User.query.get(int(uid))
+            if u:
+                user_email = u.email
+    except Exception:
+        pass
+    
+    for course in courses:
+        data = course.to_dict()
+        data["is_enrolled"] = False
+        
+        if user_email:
+            enrollment = CourseEnrollment.query.filter_by(
+                course_id=course.id,
+                student_email=user_email
+            ).first()
+            data["is_enrolled"] = enrollment is not None
+        
+        result.append(data)
+    
+    return jsonify(result)
 
 
 @courses_bp.get("/courses/<int:course_id>")
@@ -79,7 +108,7 @@ def enroll_course(course_id):
         return jsonify({"error": "El curso ha alcanzado su límite de estudiantes"}), 400
     
     # Verificar fecha límite de inscripción
-    if course.registration_deadline and datetime.now(timezone.utc) > course.registration_deadline:
+    if course.registration_deadline and datetime.now() > course.registration_deadline:
         return jsonify({"error": "La fecha límite de inscripción ha pasado"}), 400
     
     # Determinar si es socio y tipo de membresía

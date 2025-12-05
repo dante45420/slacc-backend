@@ -86,7 +86,7 @@ def enroll_event(course_id: int):
 
     if not course.is_active:
         return jsonify({"error": "El evento no está activo"}), 400
-    if course.registration_deadline and datetime.now(timezone.utc) > course.registration_deadline:
+    if course.registration_deadline and datetime.now() > course.registration_deadline:
         return jsonify({"error": "El plazo de inscripción terminó"}), 400
 
     # Capacidad
