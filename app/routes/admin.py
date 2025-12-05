@@ -21,23 +21,7 @@ def list_applications():
     return jsonify({"message":"Forbidden"}), 403
   
   items = Application.query.order_by(Application.created_at.desc()).all()
-  return jsonify([
-    {
-      "id": a.id,
-      "name": a.name,
-      "email": a.email,
-      "phone": a.phone,
-      "motivation": a.motivation,
-      "specialization": a.specialization,
-      "experience_years": a.experience_years,
-      "membership_type": a.membership_type,
-      "status": a.status,
-      "resolution_note": a.resolution_note,
-      "decided_at": a.decided_at.isoformat() if a.decided_at else None,
-      "created_at": a.created_at.isoformat(),
-    }
-    for a in items
-  ])
+  return jsonify([a.to_dict() for a in items])
 
 
 @admin_bp.get("/applications/<int:app_id>")
@@ -53,21 +37,10 @@ def get_application(app_id):
   # Try to find the associated user (by email)
   associated_user = User.query.filter_by(email=app.email).first()
   
-  response_data = {
-    "id": app.id,
-    "name": app.name,
-    "email": app.email,
-    "phone": app.phone,
-    "motivation": app.motivation,
-    "specialization": app.specialization,
-    "experience_years": app.experience_years,
-    "membership_type": app.membership_type,
-    "status": app.status,
-    "resolution_note": app.resolution_note,
-    "decided_at": app.decided_at.isoformat() if app.decided_at else None,
-    "created_at": app.created_at.isoformat(),
-    "initial_password": associated_user.initial_password if associated_user else None,  # Include password if user exists
-  }
+  response_data = app.to_dict()
+  # Add initial_password if user exists
+  response_data["initial_password"] = associated_user.initial_password if associated_user else None
+  
   return jsonify(response_data)
 
 

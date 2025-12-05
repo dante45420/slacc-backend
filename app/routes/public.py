@@ -14,43 +14,92 @@ public_bp = Blueprint("public", __name__, url_prefix="/api")
 
 @public_bp.post("/applications")
 def create_application():
+  from datetime import datetime as dt
   # Acepta JSON (legacy) o multipart/form-data con PDF
   if request.content_type and request.content_type.startswith('multipart/form-data'):
+    # Información Personal
     name = (request.form.get("name") or "").strip()
     email = (request.form.get("email") or "").strip().lower()
+    website = (request.form.get("website") or "").strip()
+    city = (request.form.get("city") or "").strip()
+    country = (request.form.get("country") or "").strip()
+    whatsapp = (request.form.get("whatsapp") or "").strip()
+    
+    # Información Académica
+    specialization = (request.form.get("specialization") or "").strip()
+    residency_end_date_str = request.form.get("residency_end_date")
+    university = (request.form.get("university") or "").strip()
+    fellowship_date_str = request.form.get("fellowship_date")
+    fellowship_location = (request.form.get("fellowship_location") or "").strip()
+    
+    # Información Profesional
+    current_hospital = (request.form.get("current_hospital") or "").strip()
+    current_position = (request.form.get("current_position") or "").strip()
+    teaching_degree = (request.form.get("teaching_degree") or "").strip()
+    
+    # Legacy fields
     phone = (request.form.get("phone") or "").strip()
     motivation = (request.form.get("motivation") or "").strip()
-    specialization = (request.form.get("specialization") or "").strip()
     experience = request.form.get("experience")
+    
     app_row = Application()
+    # Personal
     app_row.name = name
     app_row.email = email
+    app_row.website = website
+    app_row.city = city
+    app_row.country = country
+    app_row.whatsapp = whatsapp
+    
+    # Academic
+    app_row.specialization = specialization
+    if residency_end_date_str:
+      try:
+        app_row.residency_end_date = dt.strptime(residency_end_date_str, "%Y-%m-%d").date()
+      except:
+        pass
+    app_row.university = university
+    if fellowship_date_str:
+      try:
+        app_row.fellowship_date = dt.strptime(fellowship_date_str, "%Y-%m-%d").date()
+      except:
+        pass
+    app_row.fellowship_location = fellowship_location
+    
+    # Professional
+    app_row.current_hospital = current_hospital
+    app_row.current_position = current_position
+    app_row.teaching_degree = teaching_degree
+    
+    # Legacy
     app_row.phone = phone
     app_row.motivation = motivation
-    app_row.specialization = specialization
     app_row.experience_years = experience
+    
     db.session.add(app_row)
     db.session.flush()
 
-    if "document" in request.files and request.files["document"]:
-      f = request.files["document"]
-      if f.filename and f.filename.lower().endswith(".pdf"):
-        namef = get_safe_filename(f.filename)
-        upload_dir = os.path.abspath(current_app.config["UPLOAD_DIR"]) 
-        path = os.path.join(upload_dir, namef)
-        f.save(path)
-        
-        # Validate file type after saving
-        is_valid, result = validate_document(path)
-        if not is_valid:
-          os.remove(path)  # Delete invalid file
-          return jsonify({"error": f"Archivo inválido: {result}"}), 400
-        
-        from ..models.application import ApplicationAttachment
-        att = ApplicationAttachment()
-        att.application_id = app_row.id
-        att.file_url = f"/uploads/{namef}"
-        db.session.add(att)
+    # Handle multiple document uploads (document, document2, document3)
+    from ..models.application import ApplicationAttachment
+    for key in ['document', 'document2', 'document3']:
+      if key in request.files and request.files[key]:
+        f = request.files[key]
+        if f.filename and f.filename.lower().endswith(".pdf"):
+          namef = get_safe_filename(f.filename)
+          upload_dir = os.path.abspath(current_app.config["UPLOAD_DIR"]) 
+          path = os.path.join(upload_dir, namef)
+          f.save(path)
+          
+          # Validate file type after saving
+          is_valid, result = validate_document(path)
+          if not is_valid:
+            os.remove(path)  # Delete invalid file
+            return jsonify({"error": f"Archivo inválido: {result}"}), 400
+          
+          att = ApplicationAttachment()
+          att.application_id = app_row.id
+          att.file_url = f"/uploads/{namef}"
+          db.session.add(att)
 
     db.session.commit()
     return jsonify({"id": app_row.id, "status": app_row.status}), 201
