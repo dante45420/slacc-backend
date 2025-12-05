@@ -49,7 +49,11 @@ def get_application(app_id):
     return jsonify({"message":"Forbidden"}), 403
   
   app = Application.query.get_or_404(app_id)
-  return jsonify({
+  
+  # Try to find the associated user (by email)
+  associated_user = User.query.filter_by(email=app.email).first()
+  
+  response_data = {
     "id": app.id,
     "name": app.name,
     "email": app.email,
@@ -62,7 +66,9 @@ def get_application(app_id):
     "resolution_note": app.resolution_note,
     "decided_at": app.decided_at.isoformat() if app.decided_at else None,
     "created_at": app.created_at.isoformat(),
-  })
+    "initial_password": associated_user.initial_password if associated_user else None,  # Include password if user exists
+  }
+  return jsonify(response_data)
 
 
 @admin_bp.post("/applications/<int:app_id>/approve")
@@ -141,6 +147,7 @@ def confirm_payment(app_id):
   new_user.email = app_row.email
   new_user.name = app_row.name
   new_user.password_hash = generate_password_hash(temp_password)
+  new_user.initial_password = temp_password  # Store plaintext for one-time display to admin
   new_user.role = "member"
   new_user.membership_type = app_row.membership_type
   new_user.is_active = True
@@ -562,6 +569,7 @@ def admin_get_user(user_id: int):
   data = u.to_safe_dict()
   data.update({
     "created_at": u.created_at.isoformat() if u.created_at else None,
+    "initial_password": u.initial_password,  # Always return initial password for admin display
   })
   return jsonify(data)
 

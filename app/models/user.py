@@ -13,6 +13,7 @@ class User(db.Model):
   is_active = db.Column(db.Boolean, default=True)
   payment_status = db.Column(db.String(20), default="due")  # none | due | paid
   auto_payment_enabled = db.Column(db.Boolean, default=False)
+  initial_password = db.Column(db.String(255), nullable=True)  # Plaintext initial password for one-time display (insecure but requested by client)
   created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
   def set_password(self, raw):

@@ -251,3 +251,24 @@ def news_create():
     return jsonify({"error": str(e)}), 500
 
 
+@public_bp.get("/members")
+def members_list():
+  """Obtener lista de miembros activos para directorio público"""
+  from ..models.user import User
+  
+  # Solo devolver usuarios activos con pago confirmado
+  users = User.query.filter_by(
+    is_active=True,
+    payment_status="paid"
+  ).order_by(User.name.asc()).all()
+  
+  result = []
+  for u in users:
+    result.append({
+      "id": u.id,
+      "name": u.name,
+      "email": u.email,
+      "membership_type": u.membership_type
+    })
+  
+  return jsonify(result)
