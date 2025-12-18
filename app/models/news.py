@@ -10,7 +10,7 @@ class News(db.Model):
   image_url = db.Column(db.String(500))
   status = db.Column(db.String(20), default="pending")  # pending | published | rejected
   order_index = db.Column(db.Integer, default=0)
-  category = db.Column(db.String(50), default="comunicados")  # comunicados | prensa | blog
+  category = db.Column(db.String(50), default="articulos-cientificos")  # articulos-cientificos | articulos-destacados | editoriales
   created_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
   created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

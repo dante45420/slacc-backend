@@ -12,6 +12,13 @@ from ..utils.image_processing import process_uploaded_image
 public_bp = Blueprint("public", __name__, url_prefix="/api")
 
 
+ALLOWED_NEWS_CATEGORIES = (
+  "articulos-cientificos",
+  "articulos-destacados",
+  "editoriales",
+)
+
+
 @public_bp.post("/applications")
 def create_application():
   from datetime import datetime as dt
@@ -120,9 +127,9 @@ def create_application():
 @public_bp.get("/news")
 def news_list():
   from ..models.user import User
-  q = News.query.filter_by(status="published")
+  q = News.query.filter_by(status="published").filter(News.category.in_(ALLOWED_NEWS_CATEGORIES))
   category = (request.args.get("category") or "").strip().lower()
-  if category in ("comunicados", "prensa", "blog"):
+  if category in ALLOWED_NEWS_CATEGORIES:
     q = q.filter(News.category == category)
   items = q.order_by(News.order_index.asc(), News.created_at.desc()).all()
   
@@ -175,7 +182,8 @@ def news_detail(news_id):
         return jsonify(news.to_dict())
     
     # Usuario no autenticado o no admin solo puede ver noticias publicadas
-    if news.status != "published":
+    # y dentro de las categorías habilitadas.
+    if news.status != "published" or news.category not in ALLOWED_NEWS_CATEGORIES:
         return jsonify({"error": "Noticia no encontrada"}), 404
     
     return jsonify(news.to_dict())
@@ -287,7 +295,10 @@ def news_create():
     n.excerpt = excerpt
     n.content = content
     n.image_url = image_url
-    n.category = (request.form.get("category") or "comunicados").strip().lower()
+    category = (request.form.get("category") or ALLOWED_NEWS_CATEGORIES[0]).strip().lower()
+    if category not in ALLOWED_NEWS_CATEGORIES:
+      return jsonify({"error": "Categoría inválida"}), 400
+    n.category = category
     n.status = "pending"
     n.created_by_user_id = uid
     db.session.add(n)

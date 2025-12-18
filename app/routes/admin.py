@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import func
 from ..extensions import db
 from ..models.application import Application
 from ..models.news import News
@@ -100,8 +101,6 @@ def confirm_payment(app_id):
 
   from datetime import datetime
   from werkzeug.security import generate_password_hash
-  import secrets
-  import string
   
   app_row = Application.query.get_or_404(app_id)
   if app_row.status != "payment_pending":
@@ -112,8 +111,9 @@ def confirm_payment(app_id):
   if existing_user:
     return jsonify({"message": "Ya existe un usuario con ese email"}), 400
   
-  # Generar contraseña temporal
-  temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+  # Generar contraseña temporal secuencial: slacc001, slacc002, ...
+  next_id = (db.session.query(func.max(User.id)).scalar() or 0) + 1
+  temp_password = f"slacc{next_id:03d}"
   
   # Crear el usuario
   new_user = User()
@@ -261,7 +261,11 @@ def edit_news(news_id):
         if 'content' in request.form:
             news.content = request.form['content']
         if 'category' in request.form:
-            news.category = (request.form['category'] or news.category).strip().lower()
+          category = (request.form['category'] or news.category).strip().lower()
+          allowed = ("articulos-cientificos", "articulos-destacados", "editoriales")
+          if category not in allowed:
+            return jsonify({"error": "Categoría inválida"}), 400
+          news.category = category
         
         # Procesar imagen si se subió una nueva
         if 'image' in request.files:
@@ -584,7 +588,7 @@ def admin_create_member():
   data = request.get_json() or {}
   email = (data.get("email") or "").strip().lower()
   name = (data.get("name") or "").strip()
-  password = data.get("password") or os.urandom(4).hex()
+  password = (data.get("password") or "").strip()
   membership_type = data.get("membership_type") or "normal"
 
   if not email or not name:
@@ -592,11 +596,16 @@ def admin_create_member():
   if User.query.filter_by(email=email).first():
     return jsonify({"message": "Email ya existe"}), 400
 
+  if not password:
+    next_id = (db.session.query(func.max(User.id)).scalar() or 0) + 1
+    password = f"slacc{next_id:03d}"
+
   from werkzeug.security import generate_password_hash
   new_member = User()
   new_member.email = email
   new_member.name = name
   new_member.password_hash = generate_password_hash(password)
+  new_member.initial_password = password
   new_member.role = "member"
   new_member.membership_type = membership_type
   new_member.is_active = True
@@ -606,6 +615,9 @@ def admin_create_member():
 
   # TODO: Send credentials via secure email
   resp = new_member.to_safe_dict()
-  resp.update({"message": "Usuario creado. Credenciales deben ser enviadas por email."})
+  resp.update({
+    "message": "Socio creado. Credenciales deben ser enviadas por email.",
+    "initial_password": new_member.initial_password,
+  })
   return jsonify(resp), 201
 

@@ -32,3 +32,32 @@ def me():
   return jsonify(user.to_safe_dict())
 
 
+@auth_bp.post("/auth/change-password")
+@jwt_required()
+def change_password():
+  """Permite al usuario autenticado cambiar su contraseña."""
+  uid = int(get_jwt_identity())
+  user = User.query.get(uid)
+  if not user:
+    return jsonify({"message": "No encontrado"}), 404
+
+  data = request.get_json() or {}
+  current_password = data.get("current_password", "")
+  new_password = data.get("new_password", "")
+
+  if not current_password or not new_password:
+    return jsonify({"message": "Faltan campos requeridos"}), 400
+
+  if not user.check_password(current_password):
+    return jsonify({"message": "La contraseña actual es incorrecta"}), 400
+
+  if len(new_password) < 8:
+    return jsonify({"message": "La nueva contraseña debe tener al menos 8 caracteres"}), 400
+
+  user.set_password(new_password)
+  # Si existía una contraseña inicial en texto plano, ya no es válida
+  user.initial_password = None
+  db.session.commit()
+  return jsonify({"message": "Contraseña actualizada", "user": user.to_safe_dict()})
+
+
