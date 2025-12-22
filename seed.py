@@ -2,7 +2,7 @@ from app import create_app
 from app.extensions import db
 from app.models.news import News
 from app.models.application import Application
-from app.models.course import Course, CourseEnrollment
+from app.models.event import Event, EventEnrollment
 from app.models.user import User
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
@@ -163,8 +163,8 @@ with app.app_context():
       news.created_by_user_id = user_objects[0].id
     db.session.add(news)
   
-  # ===== COURSES/EVENTS (6+ varied examples) =====
-  courses_data = [
+  # ===== EVENTS (6+ varied examples) =====
+  events_data = [
     {
       "title": "Webinar: Abordajes Innovadores en Artroplastia",
       "description": "Un webinar interactivo sobre las últimas técnicas quirúrgicas",
@@ -269,26 +269,26 @@ with app.app_context():
     },
   ]
   
-  course_objects = []
-  for c in courses_data:
-    course = Course()
-    course.title = c["title"]
-    course.description = c["description"]
-    course.instructor = c["instructor"]
-    course.duration_hours = c["duration_hours"]
-    course.format = c["format"]
-    course.location = c["location"]
-    course.max_students = c["max_students"]
-    course.price_member = c["price_member"]
-    course.price_non_member = c["price_non_member"]
-    course.price_joven = c["price_joven"]
-    course.price_gratuito = c["price_gratuito"]
-    course.start_date = c["start_date"]
-    course.end_date = c["end_date"]
-    course.registration_deadline = c["registration_deadline"]
-    course.is_active = c["is_active"]
-    db.session.add(course)
-    course_objects.append(course)
+  event_objects = []
+  for e in events_data:
+    event = Event()
+    event.title = e["title"]
+    event.description = e["description"]
+    event.instructor = e["instructor"]
+    event.duration_hours = e["duration_hours"]
+    event.format = e["format"]
+    event.location = e["location"]
+    event.max_students = e["max_students"]
+    event.price_member = e["price_member"]
+    event.price_non_member = e["price_non_member"]
+    event.price_joven = e["price_joven"]
+    event.price_gratuito = e["price_gratuito"]
+    event.start_date = e["start_date"]
+    event.end_date = e["end_date"]
+    event.registration_deadline = e["registration_deadline"]
+    event.is_active = e["is_active"]
+    db.session.add(event)
+    event_objects.append(event)
   
   db.session.flush()
   
@@ -376,11 +376,11 @@ with app.app_context():
   
   db.session.flush()
   
-  # ===== COURSE ENROLLMENTS (8+ varied examples) =====
-  if len(course_objects) > 0 and len(user_objects) > 0:
+  # ===== EVENT ENROLLMENTS (8+ varied examples) =====
+  if len(event_objects) > 0 and len(user_objects) > 0:
     enrollments_data = [
       {
-        "course_idx": 0,
+        "event_idx": 0,
         "user_idx": 0,
         "student_name": "Dr. Carlos López",
         "student_email": "carlos.lopez@example.com",
@@ -391,7 +391,7 @@ with app.app_context():
         "is_member": True,
       },
       {
-        "course_idx": 0,
+        "event_idx": 0,
         "user_idx": 1,
         "student_name": "Dra. Ana García",
         "student_email": "ana.garcia@example.com",
@@ -402,7 +402,7 @@ with app.app_context():
         "is_member": True,
       },
       {
-        "course_idx": 1,
+        "event_idx": 1,
         "user_idx": None,
         "student_name": "Dr. Desconocido No Socio",
         "student_email": "nosocio@example.com",
@@ -413,7 +413,7 @@ with app.app_context():
         "is_member": False,
       },
       {
-        "course_idx": 1,
+        "event_idx": 1,
         "user_idx": 2,
         "student_name": "Dr. Jorge Silva",
         "student_email": "jorge.silva@example.com",
@@ -424,7 +424,7 @@ with app.app_context():
         "is_member": True,
       },
       {
-        "course_idx": 2,
+        "event_idx": 2,
         "user_idx": 3,
         "student_name": "Dra. María Fernández",
         "student_email": "maria.fernandez@example.com",
@@ -435,7 +435,7 @@ with app.app_context():
         "is_member": True,
       },
       {
-        "course_idx": 3,
+        "event_idx": 3,
         "user_idx": 5,
         "student_name": "Dra. Lucía Ramírez",
         "student_email": "lucia.ramirez@example.com",
@@ -446,7 +446,7 @@ with app.app_context():
         "is_member": True,
       },
       {
-        "course_idx": 4,
+        "event_idx": 4,
         "user_idx": 0,
         "student_name": "Dr. Carlos López",
         "student_email": "carlos.lopez@example.com",
@@ -457,7 +457,7 @@ with app.app_context():
         "is_member": True,
       },
       {
-        "course_idx": 5,
+        "event_idx": 5,
         "user_idx": 1,
         "student_name": "Dra. Ana García",
         "student_email": "ana.garcia@example.com",
@@ -470,8 +470,8 @@ with app.app_context():
     ]
     
     for e in enrollments_data:
-      enrollment = CourseEnrollment()
-      enrollment.course_id = course_objects[e["course_idx"]].id
+      enrollment = EventEnrollment()
+      enrollment.event_id = event_objects[e["event_idx"]].id
       if e["user_idx"] is not None:
         enrollment.user_id = user_objects[e["user_idx"]].id
       enrollment.student_name = e["student_name"]
@@ -489,7 +489,7 @@ with app.app_context():
   print("✓ Base de datos sembrada exitosamente con datos variados!")
   print(f"  - {len(user_objects)} usuarios creados")
   print(f"  - {len(news_data)} noticias creadas")
-  print(f"  - {len(course_objects)} cursos/eventos creados")
+  print(f"  - {len(event_objects)} eventos creados")
   print(f"  - {len(applications_data)} aplicaciones de membresía creadas")
 
 

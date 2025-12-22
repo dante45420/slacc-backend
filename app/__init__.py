@@ -12,7 +12,6 @@ from .routes.auth import auth_bp
 from .routes.public import public_bp
 from .routes.admin import admin_bp
 from .routes.events import events_bp
-from .routes.courses import courses_bp
 
 
 def create_app():
@@ -54,7 +53,6 @@ def create_app():
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(events_bp)
-    app.register_blueprint(courses_bp)
 
     @app.get("/api/health")
     def health():

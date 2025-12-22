@@ -2,12 +2,12 @@ from datetime import datetime
 from ..extensions import db
 
 
-class Course(db.Model):
+class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    content = db.Column(db.Text)  # Contenido detallado del curso
-    instructor = db.Column(db.String(255))  # Instructor del curso
+    content = db.Column(db.Text)  # Contenido detallado del evento
+    instructor = db.Column(db.String(255))  # Instructor del evento
     duration_hours = db.Column(db.Integer)  # Duración en horas
     format = db.Column(db.String(20), default="webinar")  # webinar | presencial
     location = db.Column(db.String(255))  # Ubicación física o link para eventos presenciales/online
@@ -19,8 +19,8 @@ class Course(db.Model):
     start_date = db.Column(db.DateTime)  # Fecha de inicio
     end_date = db.Column(db.DateTime)  # Fecha de fin
     registration_deadline = db.Column(db.DateTime)  # Fecha límite de inscripción
-    is_active = db.Column(db.Boolean, default=True)  # Si el curso está activo
-    image_url = db.Column(db.String(500))  # Imagen del curso
+    is_active = db.Column(db.Boolean, default=True)  # Si el evento está activo
+    image_url = db.Column(db.String(500))  # Imagen del evento
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -61,9 +61,9 @@ class Course(db.Model):
             return self.price_member
 
 
-class CourseEnrollment(db.Model):
+class EventEnrollment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)  # Puede ser null para no socios
     student_name = db.Column(db.String(255), nullable=False)  # Nombre del estudiante
     student_email = db.Column(db.String(255), nullable=False)  # Email del estudiante
@@ -78,7 +78,7 @@ class CourseEnrollment(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "course_id": self.course_id,
+            "event_id": self.event_id,
             "user_id": self.user_id,
             "student_name": self.student_name,
             "student_email": self.student_email,

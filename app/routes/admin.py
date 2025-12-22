@@ -7,7 +7,7 @@ from ..extensions import db
 from ..models.application import Application
 from ..models.news import News
 from ..models.user import User
-from ..models.course import Course, CourseEnrollment
+from ..models.event import Event, EventEnrollment
 from ..utils.image_processing import process_uploaded_image
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -390,7 +390,7 @@ def admin_events_list():
   user = User.query.get(uid)
   if not user or user.role != "admin":
     return jsonify({"message":"Forbidden"}), 403
-  items = Course.query.order_by(Course.start_date.desc()).all()
+  items = Event.query.order_by(Event.start_date.desc()).all()
   return jsonify([c.to_dict() for c in items])
 
 
@@ -412,26 +412,26 @@ def admin_events_create():
     if len(s) == 10:
       s = s + "T00:00:00"
     return datetime.fromisoformat(s)
-  course = Course()
-  course.title = (data.get("title") or "").strip()
-  course.description = (data.get("description") or "").strip()
-  course.content = (data.get("content") or "").strip()
-  course.instructor = (data.get("instructor") or "").strip()
-  course.duration_hours = data.get("duration_hours")
-  course.format = (data.get("format") or "webinar")
-  course.max_students = data.get("max_students")
-  course.price_member = float(data.get("price_member") or 0)
-  course.price_non_member = float(data.get("price_non_member") or 0)
-  course.price_joven = float(data.get("price_joven") or 0)
-  course.price_gratuito = float(data.get("price_gratuito") or 0)
-  course.start_date = parse(data.get("start_date"))
-  course.end_date = parse(data.get("end_date"))
-  course.registration_deadline = parse(data.get("registration_deadline"))
-  course.is_active = bool(data.get("is_active", True))
-  course.image_url = (data.get("image_url") or "").strip()
-  db.session.add(course)
+  event = Event()
+  event.title = (data.get("title") or "").strip()
+  event.description = (data.get("description") or "").strip()
+  event.content = (data.get("content") or "").strip()
+  event.instructor = (data.get("instructor") or "").strip()
+  event.duration_hours = data.get("duration_hours")
+  event.format = (data.get("format") or "webinar")
+  event.max_students = data.get("max_students")
+  event.price_member = float(data.get("price_member") or 0)
+  event.price_non_member = float(data.get("price_non_member") or 0)
+  event.price_joven = float(data.get("price_joven") or 0)
+  event.price_gratuito = float(data.get("price_gratuito") or 0)
+  event.start_date = parse(data.get("start_date"))
+  event.end_date = parse(data.get("end_date"))
+  event.registration_deadline = parse(data.get("registration_deadline"))
+  event.is_active = bool(data.get("is_active", True))
+  event.image_url = (data.get("image_url") or "").strip()
+  db.session.add(event)
   db.session.commit()
-  return jsonify(course.to_dict()), 201
+  return jsonify(event.to_dict()), 201
 
 
 @admin_bp.put("/events/<int:event_id>")
@@ -442,7 +442,7 @@ def admin_events_update(event_id: int):
   if not user or user.role != "admin":
     return jsonify({"message":"Forbidden"}), 403
 
-  course = Course.query.get_or_404(event_id)
+  event = Event.query.get_or_404(event_id)
   data = request.get_json() or {}
   from datetime import datetime
   def parse2(s, old):
@@ -453,24 +453,41 @@ def admin_events_update(event_id: int):
       s = s + "T00:00:00"
     return datetime.fromisoformat(s)
 
-  course.title = (data.get("title") or course.title).strip()
-  course.description = (data.get("description") or course.description).strip()
-  course.content = (data.get("content") or course.content).strip()
-  course.instructor = (data.get("instructor") or course.instructor).strip()
-  course.duration_hours = data.get("duration_hours", course.duration_hours)
-  course.format = data.get("format", course.format)
-  course.max_students = data.get("max_students", course.max_students)
-  course.price_member = float(data.get("price_member", course.price_member))
-  course.price_non_member = float(data.get("price_non_member", course.price_non_member))
-  course.price_joven = float(data.get("price_joven", course.price_joven))
-  course.price_gratuito = float(data.get("price_gratuito", course.price_gratuito))
-  course.start_date = parse2(data.get("start_date"), course.start_date)
-  course.end_date = parse2(data.get("end_date"), course.end_date)
-  course.registration_deadline = parse2(data.get("registration_deadline"), course.registration_deadline)
-  course.is_active = bool(data.get("is_active", course.is_active))
-  course.image_url = (data.get("image_url") or course.image_url or "").strip()
+  # Update title (required field)
+  new_title = data.get("title")
+  if new_title:
+    event.title = new_title.strip()
+  
+  # Update optional string fields
+  new_description = data.get("description")
+  if new_description is not None:
+    event.description = new_description.strip() or None
+  
+  new_content = data.get("content")
+  if new_content is not None:
+    event.content = new_content.strip() or None
+  
+  new_instructor = data.get("instructor")
+  if new_instructor is not None:
+    event.instructor = new_instructor.strip() or None
+  
+  event.duration_hours = data.get("duration_hours", event.duration_hours)
+  event.format = data.get("format", event.format)
+  event.max_students = data.get("max_students", event.max_students)
+  event.price_member = float(data.get("price_member", event.price_member))
+  event.price_non_member = float(data.get("price_non_member", event.price_non_member))
+  event.price_joven = float(data.get("price_joven", event.price_joven))
+  event.price_gratuito = float(data.get("price_gratuito", event.price_gratuito))
+  event.start_date = parse2(data.get("start_date"), event.start_date)
+  event.end_date = parse2(data.get("end_date"), event.end_date)
+  event.registration_deadline = parse2(data.get("registration_deadline"), event.registration_deadline)
+  event.is_active = bool(data.get("is_active", event.is_active))
+  
+  new_image_url = data.get("image_url")
+  if new_image_url is not None:
+    event.image_url = new_image_url.strip() or None
   db.session.commit()
-  return jsonify(course.to_dict())
+  return jsonify(event.to_dict())
 
 
 @admin_bp.post("/events/<int:event_id>/image")
@@ -481,7 +498,7 @@ def admin_events_upload_image(event_id: int):
   if not user or user.role != "admin":
     return jsonify({"message":"Forbidden"}), 403
 
-  course = Course.query.get_or_404(event_id)
+  event = Event.query.get_or_404(event_id)
   if 'image' not in request.files:
     return jsonify({"error": "Archivo 'image' requerido"}), 400
 
@@ -500,9 +517,9 @@ def admin_events_upload_image(event_id: int):
   if optimize_success:
     print(f"Image optimized: {optimize_msg}")
   
-  course.image_url = f"/uploads/{filename}"
+  event.image_url = f"/uploads/{filename}"
   db.session.commit()
-  return jsonify({"image_url": course.image_url})
+  return jsonify({"image_url": event.image_url})
 
 
 @admin_bp.delete("/events/<int:event_id>")
@@ -512,11 +529,12 @@ def admin_events_delete(event_id: int):
   user = User.query.get(uid)
   if not user or user.role != "admin":
     return jsonify({"message":"Forbidden"}), 403
-  course = Course.query.get_or_404(event_id)
-  has_enrollments = CourseEnrollment.query.filter_by(course_id=event_id).count() > 0
-  if has_enrollments:
-    return jsonify({"error": "No se puede eliminar con inscripciones"}), 400
-  db.session.delete(course)
+  event = Event.query.get_or_404(event_id)
+  
+  # Delete associated enrollments first (cascade delete)
+  EventEnrollment.query.filter_by(event_id=event_id).delete()
+  
+  db.session.delete(event)
   db.session.commit()
   return jsonify({"message": "Eliminado"})
 
@@ -528,10 +546,10 @@ def admin_events_enrollments(event_id: int):
   user = User.query.get(uid)
   if not user or user.role != "admin":
     return jsonify({"message":"Forbidden"}), 403
-  course = Course.query.get_or_404(event_id)
-  enrollments = CourseEnrollment.query.filter_by(course_id=event_id).order_by(CourseEnrollment.enrollment_date.desc()).all()
+  event = Event.query.get_or_404(event_id)
+  enrollments = EventEnrollment.query.filter_by(event_id=event_id).order_by(EventEnrollment.enrollment_date.desc()).all()
   return jsonify({
-    "event": course.to_dict(),
+    "event": event.to_dict(),
     "enrollments": [e.to_dict() for e in enrollments]
   })
 @admin_bp.get("/users/<int:user_id>")
