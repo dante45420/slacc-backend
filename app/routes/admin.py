@@ -302,6 +302,49 @@ def edit_news(news_id):
         return jsonify({"error": str(e)}), 500
 
 
+@admin_bp.put("/news/<int:news_id>")
+@jwt_required()
+def update_news_json(news_id):
+    """Actualizar una noticia via JSON (para el admin panel)"""
+    uid = int(get_jwt_identity())
+    user = User.query.get(uid)
+    if not user or user.role != "admin":
+        return jsonify({"message": "Forbidden"}), 403
+    
+    news = News.query.get(news_id)
+    if not news:
+        return jsonify({"error": "Noticia no encontrada"}), 404
+    
+    try:
+        data = request.get_json() or {}
+        
+        if 'title' in data:
+            news.title = data['title']
+        if 'excerpt' in data:
+            news.excerpt = data['excerpt']
+        if 'content' in data:
+            news.content = data['content']
+        if 'category' in data:
+            category = (data['category'] or news.category).strip().lower()
+            allowed = ("articulos-cientificos", "articulos-destacados", "editoriales")
+            if category not in allowed:
+                return jsonify({"error": "Categoría inválida"}), 400
+            news.category = category
+        if 'status' in data:
+            status = data['status']
+            if status in ("pending", "approved", "rejected"):
+                news.status = status
+        if 'order_index' in data:
+            news.order_index = data['order_index']
+        
+        db.session.commit()
+        return jsonify({"message": "Noticia actualizada correctamente", "news": news.to_dict()})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 @admin_bp.get("/news/<int:news_id>/view")
 @jwt_required()
 def view_news(news_id):
